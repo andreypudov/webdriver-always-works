@@ -1,0 +1,104 @@
+* browser.getMetrics is not a function
+
+** How to reproduce the bug
+
+#+begin_src shell
+npm init wdio . -- --yes
+npm install @wdio/devtools-service --save-dev
+#+end_src
+
+wdio.conf.js:
+#+begin_src shell
+services: ["devtools"]
+#+end_src
+
+example.e2e.js:
+#+begin_src javascript
+import assert from 'node:assert'
+
+describe('JSON.org page', () => {
+    before(() => {
+        browser.enablePerformanceAudits()
+    })
+
+    it('should load within performance budget', () => {
+        /**
+         * this page load will take a bit longer as the DevTools service will
+         * capture all metrics in the background
+         */
+        browser.url('http://json.org')
+
+        let metrics = browser.getMetrics()
+        assert.ok(metrics.speedIndex < 1500) // check that speedIndex is below 1.5ms
+
+        let score = browser.getPerformanceScore() // get Lighthouse Performance score
+        assert.ok(score >= .99) // Lighthouse Performance score is at 99% or higher
+
+        $('=Esperanto').click()
+
+        metrics = browser.getMetrics()
+        assert.ok(metrics.speedIndex < 1500)
+        score = browser.getPerformanceScore()
+        assert.ok(score >= .99)
+    })
+
+    after(() => {
+        browser.disablePerformanceAudits()
+    })
+})
+#+end_src
+
+#+begin_src shell
+npx wdio run ./wdio.conf.js
+#+end_src
+
+** Output
+
+#+begin_src shell
+Execution of 1 workers started at 2023-02-02T14:52:02.771Z
+
+2023-02-02T14:52:02.974Z INFO @wdio/cli:launcher: Run onPrepare hook
+2023-02-02T14:52:02.975Z INFO @wdio/cli:launcher: Run onWorkerStart hook
+2023-02-02T14:52:02.976Z INFO @wdio/local-runner: Start worker 0-0 with arg: run,./wdio.conf.js
+[0-0] 2023-02-02T14:52:03.286Z INFO @wdio/local-runner: Run worker command: run
+[0-0] RUNNING in chrome - file:///test/specs/example.e2e.js
+[0-0] 2023-02-02T14:52:03.541Z INFO devtools:puppeteer: Initiate new session using the DevTools protocol
+[0-0] 2023-02-02T14:52:03.541Z INFO devtools: Launch Google Chrome (/<location>/Google Chrome) with flags: --enable-automation --disable-popup-blocking --disable-extensions --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-sync --metrics-recording-only --disable-default-apps --mute-audio --no-first-run --no-default-browser-check --disable-hang-monitor --disable-prompt-on-repost --disable-client-side-phishing-detection --password-store=basic --use-mock-keychain --disable-component-extensions-with-background-pages --disable-breakpad --disable-dev-shm-usage --disable-ipc-flooding-protection --disable-renderer-backgrounding --force-fieldtrials=*BackgroundTracing/default/ --enable-features=NetworkService,NetworkServiceInProcess --disable-features=site-per-process,TranslateUI,BlinkGenPropertyTrees --window-position=0,0 --window-size=1200,900
+[0-0] 2023-02-02T14:52:04.055Z INFO devtools: Connect Puppeteer with browser on port 53316
+[0-0] 2023-02-02T14:52:04.348Z INFO webdriver: COMMAND enablePerformanceAudits()
+[0-0] 2023-02-02T14:52:04.349Z INFO webdriver: RESULT undefined
+[0-0] 2023-02-02T14:52:04.350Z INFO @wdio/devtools-service:TraceGatherer: Start tracing frame with url http://json.org
+[0-0] TypeError in "JSON.org page.should load within performance budget"
+TypeError: browser.getPerformanceScore is not a function
+    at Context.<anonymous> (file:///<location>//example.e2e.js:14:25)
+[0-0] 2023-02-02T14:52:04.352Z INFO webdriver: COMMAND disablePerformanceAudits()
+[0-0] 2023-02-02T14:52:04.352Z INFO webdriver: RESULT undefined
+[0-0] 2023-02-02T14:52:04.354Z INFO devtools: COMMAND deleteSession()
+[0-0] 2023-02-02T14:52:04.354Z INFO devtools: RESULT null
+[0-0] FAILED in chrome - file:///test/specs/example.e2e.js
+2023-02-02T14:52:04.464Z INFO @wdio/cli:launcher: Run onWorkerEnd hook
+2023-02-02T14:52:04.465Z INFO @wdio/cli:launcher: Run onComplete hook
+
+ "spec" Reporter:
+------------------------------------------------------------------
+[chrome 109.0.0.0 darwin #0-0] Running: chrome (v109.0.0.0) on darwin
+[chrome 109.0.0.0 darwin #0-0] Session ID: 50c5f00f-d7c7-4ccc-ae84-f4a9f51d8c4d
+[chrome 109.0.0.0 darwin #0-0]
+[chrome 109.0.0.0 darwin #0-0] » /test/specs/example.e2e.js
+[chrome 109.0.0.0 darwin #0-0] JSON.org page
+[chrome 109.0.0.0 darwin #0-0]    ✖ should load within performance budget
+[chrome 109.0.0.0 darwin #0-0]
+[chrome 109.0.0.0 darwin #0-0] 1 failing (9ms)
+[chrome 109.0.0.0 darwin #0-0]
+[chrome 109.0.0.0 darwin #0-0] 1) JSON.org page should load within performance budget
+[chrome 109.0.0.0 darwin #0-0] browser.getPerformanceScore is not a function
+[chrome 109.0.0.0 darwin #0-0] TypeError: browser.getPerformanceScore is not a function
+[chrome 109.0.0.0 darwin #0-0]     at Context.<anonymous> (file:///<location>/example.e2e.js:14:25)
+
+
+Spec Files:      0 passed, 1 failed, 1 total (100% completed) in 00:00:01 
+
+2023-02-02T14:52:04.466Z INFO @wdio/local-runner: Shutting down spawned worker
+2023-02-02T14:52:04.716Z INFO @wdio/local-runner: Waiting for 0 to shut down gracefully
+2023-02-02T14:52:04.717Z INFO @wdio/local-runner: shutting down
+#+end_src
